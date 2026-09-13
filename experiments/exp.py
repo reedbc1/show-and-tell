@@ -1,15 +1,13 @@
-from pathlib import Path
 import sys
 import time
+from pathlib import Path
 
 import cv2 as cv
 import matplotlib.pyplot as plt
 import mediapipe as mp
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
-from mediapipe.tasks.python.vision import drawing_utils
-from mediapipe.tasks.python.vision import drawing_styles
 import numpy as np
+from mediapipe.tasks.python import vision
+from mediapipe.tasks.python.vision import drawing_styles, drawing_utils
 
 BaseOptions = mp.tasks.BaseOptions
 HolisticLandmarker = mp.tasks.vision.HolisticLandmarker
@@ -92,7 +90,7 @@ def plot_face_blendshapes_bar_graph(face_blendshapes):
   # The blendshapes are ordered in decreasing score value.
   face_blendshapes_ranks = range(len(face_blendshapes_names))
 
-  fig, ax = plt.subplots(figsize=(12, 12))
+  fig, ax = plt.subplots(figsize=(12, 12))  # noqa: RUF059
   bar = ax.barh(face_blendshapes_ranks, face_blendshapes_scores, label=[str(x) for x in face_blendshapes_ranks])
   ax.set_yticks(face_blendshapes_ranks, face_blendshapes_names)
   ax.invert_yaxis()
