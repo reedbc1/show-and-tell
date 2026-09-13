@@ -152,5 +152,10 @@ def get_shoulders(result):
     print(f"right shoulder: {rs}")
 
 
+# TODO: function to figure out if hands are above shoulders
+
+# TODO: does google have example code to detect posture, face positions, or hand gestures?
+
+
 if __name__ == "__main__":
    main()
