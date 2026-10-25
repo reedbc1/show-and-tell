@@ -66,7 +66,7 @@ def main():
                     spinning = should_spin
                     if spinning:
                         cat_cap.set(cv.CAP_PROP_POS_FRAMES, 0)
-                        pygame.mixer.music.play(loops=-1, start=0.25)
+                        pygame.mixer.music.play(loops=-1)
                     else:
                         pygame.mixer.music.stop()
 
