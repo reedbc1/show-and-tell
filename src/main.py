@@ -1,4 +1,3 @@
-import sys
 import time
 from pathlib import Path
 
@@ -6,6 +5,7 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 import mediapipe as mp
 import numpy as np
+import pygame
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision import drawing_styles, drawing_utils
 
@@ -15,6 +15,7 @@ HolisticLandmarkerOptions = mp.tasks.vision.HolisticLandmarkerOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
+ASSETS_DIR = PROJECT_DIR / "assets"
 model_path = PROJECT_DIR / "holistic_landmarker.task"
 
 
@@ -113,61 +114,95 @@ def main():
         min_pose_detection_confidence=0.5,
         min_hand_landmarks_confidence=0.5)
 
-    with HolisticLandmarker.create_from_options(options) as landmarker:
-        # The landmarker is initialized. Use it here.
+    cap = None
+    cat_cap = None
+    try:
+        stationary_cat = cv.imread(str(ASSETS_DIR / "stationary-cat.png"))
+        if stationary_cat is None:
+            raise RuntimeError("Cannot load assets/stationary-cat.png.")
+
+        cat_cap = cv.VideoCapture(str(ASSETS_DIR / "spinning-cat.gif"))
+        if not cat_cap.isOpened():
+            raise RuntimeError("Cannot open assets/spinning-cat.gif.")
+
+        pygame.mixer.init()
+        pygame.mixer.music.load(str(ASSETS_DIR / "ooeeii.ogg"))
+
         cap = cv.VideoCapture(0)
-        start = time.perf_counter()
         if not cap.isOpened():
-            print("Cannot open camera.")
-            sys.exit()
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                print("Can't recieve frame (stream end?). Exiting...")
-                break
-            # Our operations on the frame come here
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-            time_ms = int((time.perf_counter() - start) * 1000)
+            raise RuntimeError("Cannot open camera.")
 
-            result = landmarker.detect_for_video(mp_image, time_ms)
-            w_o_s = wrists_over_shoulders(result)
-            print(w_o_s)
+        with HolisticLandmarker.create_from_options(options) as landmarker:
+            spinning = False
+            start = time.perf_counter()
+            last_timestamp_ms = -1
 
-            annotated_image = draw_landmarks_on_image(mp_image.numpy_view(), result)
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    print("Cannot receive a camera frame. Exiting...")
+                    break
 
-            # Display the resulting frame
-            cv.imshow("frame", annotated_image)
+                # OpenCV captures BGR; MediaPipe expects RGB.
+                rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+                mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+                time_ms = max(last_timestamp_ms + 1, int((time.perf_counter() - start) * 1000))
+                last_timestamp_ms = time_ms
+                result = landmarker.detect_for_video(mp_image, time_ms)
+                should_spin = wrists_over_shoulders(result)
 
-            if cv.waitKey(1) == ord("q"):
-                break
+                # Change playback only when the gesture changes, so music can loop.
+                if should_spin != spinning:
+                    spinning = should_spin
+                    if spinning:
+                        cat_cap.set(cv.CAP_PROP_POS_FRAMES, 0)
+                        pygame.mixer.music.play(loops=-1, start=0.25)
+                    else:
+                        pygame.mixer.music.stop()
 
-        ## When everything done, release the capture
-        cap.release()
+                cat_frame = stationary_cat
+                if spinning:
+                    cat_ret, cat_frame = cat_cap.read()
+                    if not cat_ret:
+                        # Rewind the GIF, not the webcam, when the animation ends.
+                        cat_cap.set(cv.CAP_PROP_POS_FRAMES, 0)
+                        cat_ret, cat_frame = cat_cap.read()
+                    if not cat_ret:
+                        raise RuntimeError("Cannot read a frame from assets/spinning-cat.gif.")
+
+                cv.imshow("GIF Player", cat_frame)
+                # Keep checking the camera even while the stationary image is shown.
+                if cv.waitKey(20 if spinning else 1) & 0xFF == ord("q"):
+                    break
+                if cv.getWindowProperty("GIF Player", cv.WND_PROP_VISIBLE) < 1:
+                    break
+    finally:
+        if cap is not None:
+            cap.release()
+        if cat_cap is not None:
+            cat_cap.release()
+        if pygame.mixer.get_init():
+            pygame.mixer.music.stop()
+            pygame.mixer.quit()
         cv.destroyAllWindows()
 
-      
-def wrists_over_shoulders(result):
-	try:
-		ls = result.pose_landmarks[vision.PoseLandmark.LEFT_SHOULDER]
-		rs = result.pose_landmarks[vision.PoseLandmark.RIGHT_SHOULDER]
-		lw = result.pose_landmarks[vision.PoseLandmark.LEFT_WRIST]
-		rw = result.pose_landmarks[vision.PoseLandmark.RIGHT_WRIST]
 
-		if ls.y > lw.y and rs.y > rw.y:
-			print("Wrists are over shoulders!")
-			return True
-		else:
-			return False
-	except IndexError:
-		return False
+def wrists_over_shoulders(result, min_visibility=0.5):
+    """Return whether both visible wrists are above their matching shoulders."""
+    landmarks = result.pose_landmarks
+    if not landmarks or len(landmarks) <= vision.PoseLandmark.RIGHT_WRIST:
+        return False
 
+    ls = landmarks[vision.PoseLandmark.LEFT_SHOULDER]
+    rs = landmarks[vision.PoseLandmark.RIGHT_SHOULDER]
+    lw = landmarks[vision.PoseLandmark.LEFT_WRIST]
+    rw = landmarks[vision.PoseLandmark.RIGHT_WRIST]
+    if any(point.visibility is None or point.visibility < min_visibility for point in (ls, rs, lw, rw)):
+        return False
 
-"""
-TODO: Display cat on screen using cv2
-- Cat should be stationary when hands are not over shoulders
-- Cat should start spinning with music when hands are over shoulders
+    # Image y coordinates increase downward, so a smaller y is higher.
+    return lw.y < ls.y and rw.y < rs.y
 
-"""
 
 if __name__ == "__main__":
-   main()
+    main()
