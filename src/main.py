@@ -145,28 +145,6 @@ def main():
         cap.release()
         cv.destroyAllWindows()
 
-
-def get_shoulders(result):
-    try:
-        ls = result.pose_landmarks[vision.PoseLandmark.LEFT_SHOULDER]
-        rs = result.pose_landmarks[vision.PoseLandmark.RIGHT_SHOULDER]
-        
-        print(f"left shoulder: {ls}")
-        print(f"right shoulder: {rs}")
-    except IndexError:
-       print("Shoulders not located.")
-
-
-def get_wrists(result):
-    try:
-        lw = result.pose_landmarks[vision.PoseLandmark.LEFT_WRIST]
-        rw = result.pose_landmarks[vision.PoseLandmark.RIGHT_WRIST]
-
-        print(f"left wrist: {lw}")
-        print(f"right wrist: {rw}")
-    except IndexError:
-        print("Wrists not located.")
-
       
 def wrists_over_shoulders(result):
 	try:
