@@ -130,7 +130,8 @@ def main():
             time_ms = int((time.perf_counter() - start) * 1000)
 
             result = landmarker.detect_for_video(mp_image, time_ms)
-            get_shoulders(result)
+            w_o_s = wrists_over_shoulders(result)
+            print(w_o_s)
 
             annotated_image = draw_landmarks_on_image(mp_image.numpy_view(), result)
 
@@ -146,11 +147,42 @@ def main():
 
 
 def get_shoulders(result):
-    ls = result.pose_landmarks[vision.PoseLandmark.LEFT_SHOULDER]
-    rs = result.pose_landmarks[vision.PoseLandmark.RIGHT_SHOULDER]
-    print(f"left shoulder: {ls}")
-    print(f"right shoulder: {rs}")
+    try:
+        ls = result.pose_landmarks[vision.PoseLandmark.LEFT_SHOULDER]
+        rs = result.pose_landmarks[vision.PoseLandmark.RIGHT_SHOULDER]
+        
+        print(f"left shoulder: {ls}")
+        print(f"right shoulder: {rs}")
+    except IndexError:
+       print("Shoulders not located.")
 
+
+def get_wrists(result):
+    try:
+        lw = result.pose_landmarks[vision.PoseLandmark.LEFT_WRIST]
+        rw = result.pose_landmarks[vision.PoseLandmark.RIGHT_WRIST]
+
+        print(f"left wrist: {lw}")
+        print(f"right wrist: {rw}")
+    except IndexError:
+        print("Wrists not located.")
+
+      
+def wrists_over_shoulders(result):
+	try:
+		ls = result.pose_landmarks[vision.PoseLandmark.LEFT_SHOULDER]
+		rs = result.pose_landmarks[vision.PoseLandmark.RIGHT_SHOULDER]
+		lw = result.pose_landmarks[vision.PoseLandmark.LEFT_WRIST]
+		rw = result.pose_landmarks[vision.PoseLandmark.RIGHT_WRIST]
+
+		if ls.y > lw.y and rs.y > rw.y:
+			print("Wrists are over shoulders!")
+			return True
+		else:
+			return False
+	except IndexError:
+		return False
+   
 
 # TODO: function to figure out if hands are above shoulders
 
