@@ -172,7 +172,7 @@ def main():
 
                 cv.imshow("GIF Player", cat_frame)
                 # Keep checking the camera even while the stationary image is shown.
-                if cv.waitKey(20 if spinning else 1) & 0xFF == ord("q"):
+                if cv.waitKey(1) & 0xFF == ord("q"):
                     break
                 if cv.getWindowProperty("GIF Player", cv.WND_PROP_VISIBLE) < 1:
                     break
