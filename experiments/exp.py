@@ -182,12 +182,14 @@ def wrists_over_shoulders(result):
 			return False
 	except IndexError:
 		return False
-   
 
-# TODO: function to figure out if hands are above shoulders
 
-# TODO: does google have example code to detect posture, face positions, or hand gestures?
+"""
+TODO: Display cat on screen using cv2
+- Cat should be stationary when hands are not over shoulders
+- Cat should start spinning with music when hands are over shoulders
 
+"""
 
 if __name__ == "__main__":
    main()
